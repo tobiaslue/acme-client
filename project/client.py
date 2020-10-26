@@ -87,15 +87,17 @@ class Client:
             'identifiers': identifiers
         }).encode('utf8'))
         response: Response = self._signedPost(self._newOrder, payload)
+        print(response.text)
         finalizeUrl: str = response.json()['finalize']
-        authUrl: str = response.json()['authorizations'][0]
+        authUrls: str = response.json()['authorizations']
         orderUrl: str = response.headers['Location']
         print(f'Create order for {self._domains}')
-        return authUrl, finalizeUrl, orderUrl
+        return authUrls, finalizeUrl, orderUrl
 
     def _getChallenge(self, authUrl: str) -> Tuple[str, str]:
         emptyPayload: str = getBase64(''.encode('utf8'))
         response: Response = self._signedPost(authUrl, emptyPayload)
+        print(response.text)
         challengeType: str = 'http-01' if self._challengeType == 'http01' else 'dns-01'
         token: str = ''
         url: str = ''
@@ -127,32 +129,34 @@ class Client:
         while status == 'pending':
             responseAuth: Response = self._signedPost(authUrl, emptyPayload)
             status = responseAuth.json()['status']
-        
+        p.terminate()
+        p.join()
         print(f'Http Challenge {status}')
         
     def _solveDnsChallenge(self, keyAuth: str) -> None:
         x = 5
 
     def getCertificate(self) -> Response:
-        authUrl, finalizeUrl, orderUrl  = self._createOrder()
+        authUrls, finalizeUrl, orderUrl  = self._createOrder()
         
-        token, challengeUrl= self._getChallenge(authUrl)
+        for authUrl in authUrls:
 
-        keyAuth: str = self._getKeyAuth(token)
+            token, challengeUrl= self._getChallenge(authUrl)
 
-        if self._challengeType == 'http01':
-            self._solveHttpChallenge(keyAuth, challengeUrl, authUrl)
-        else:
-            self._solveDnsChallenge(keyAuth)
+            keyAuth: str = self._getKeyAuth(token)
+
+            if self._challengeType == 'http01':
+                self._solveHttpChallenge(keyAuth, challengeUrl, authUrl)
+            else:
+                self._solveDnsChallenge(keyAuth)
         
         emptyPayload: str = getBase64(''.encode('utf8'))        
         csr: dict = {'csr': self._getCsr()}
         print('Send Csr')
        
         responseCsr: Response = self._signedPost(finalizeUrl, getBase64(json.dumps(csr).encode('utf8')))
-       
+        print(responseCsr.text)
         orderR: Response = self._signedPost(orderUrl, emptyPayload)
-        print(orderR.text)
         certificateUrl = orderR.json()['certificate']
         certificate: Response = self._signedPost(certificateUrl, emptyPayload)
         return certificate
@@ -164,14 +168,13 @@ class Client:
         builder = builder.subject_name(x509.Name([
             x509.NameAttribute(NameOID.COMMON_NAME, self._domains[0]),
         ]))
+        dnsNames = []
         for domain in self._domains:
-            builder = builder.add_extension(
-                x509.SubjectAlternativeName([
-                    # Describe what sites we want this certificate for.
-                    x509.DNSName(domain),
-                ]),
-                critical=False,
-            )
+            dnsNames.append(x509.DNSName(domain))
+        builder = builder.add_extension(
+            x509.SubjectAlternativeName(dnsNames),
+            critical=False,
+        )
         csr = builder.sign(
             self._privateCertKey, hashes.SHA256()
         )

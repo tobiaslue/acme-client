@@ -22,7 +22,7 @@ while [ $# -gt 0 ]; do
           shift
           ;;
           --domain)
-          domains+="$2"
+          domains+="$2 "
           shift
           shift
           ;;
