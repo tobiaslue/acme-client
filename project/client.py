@@ -118,7 +118,6 @@ class Client:
         while status == 'pending':
             responseAuth: Response = self._signedPost(authUrl, emptyPayload)
             status = responseAuth.json()['status']
-            time.sleep(3)
         
         print(f'Http Challenge {status}')
         
@@ -146,7 +145,6 @@ class Client:
         orders: Response = self._signedPost(self._orders, emptyPayload)
         order = orders.json()['orders'][0]
        
-        time.sleep(3)
         orderR: Response = self._signedPost(order, emptyPayload)
 
         certificateUrl = orderR.json()['certificate']
