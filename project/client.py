@@ -143,7 +143,7 @@ class Client:
         responseCsr: Response = self._signedPost(finalizeUrl, getBase64(json.dumps(csr).encode('utf8')))
        
         orderR: Response = self._signedPost(orderUrl, emptyPayload)
-
+        print(orderR.text)
         certificateUrl = orderR.json()['certificate']
         certificate: Response = self._signedPost(certificateUrl, emptyPayload)
         return certificate
