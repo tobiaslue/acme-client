@@ -39,7 +39,7 @@ def getCertificate():
     response = make_response(certificate)
     return response
 p = Process(target=app.run, kwargs={
-    'host': 'localhost',
+    'host': record,
     'port': 5001
 })   
 p.start()  
