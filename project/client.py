@@ -105,7 +105,7 @@ class Client:
             response.headers['Content-Type'] = 'application/octet-stream'
             return response
         p = Process(target=app.run, kwargs={
-            'host': 'localhost',
+            'host': self._record,
             'port': 5002
         })   
         p.start()  
