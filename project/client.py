@@ -67,7 +67,7 @@ class Client:
         self._kid: str = response.headers['location']
         print('Create Account')
 
-    def _createOrder(self) -> Tuple[str, str]:
+    def _createOrder(self) -> Tuple[str, str, str]:
         identifiers: List[dict] = []
         for domain in self._domains:
             identifiers.append({
@@ -80,8 +80,9 @@ class Client:
         response: Response = self._signedPost(self._newOrder, payload)
         finalizeUrl: str = response.json()['finalize']
         authUrl: str = response.json()['authorizations'][0]
+        orderUrl: str = response.headers['Location']
         print(f'Create order for {self._domains}')
-        return authUrl, finalizeUrl
+        return authUrl, finalizeUrl, orderUrl
 
     def _getChallenge(self, authUrl: str) -> Tuple[str, str]:
         emptyPayload: str = getBase64(''.encode('utf8'))
@@ -124,9 +125,9 @@ class Client:
         x = 5
 
     def getCertificate(self) -> Response:
-        authUrl, finalizeUrl  = self._createOrder()
+        authUrl, finalizeUrl, orderUrl  = self._createOrder()
         
-        token, challengeUrl = self._getChallenge(authUrl)
+        token, challengeUrl= self._getChallenge(authUrl)
 
         keyAuth: str = self._getKeyAuth(token)
 
@@ -140,11 +141,8 @@ class Client:
         print('Send Csr')
        
         responseCsr: Response = self._signedPost(finalizeUrl, getBase64(json.dumps(csr).encode('utf8')))
-    
-        orders: Response = self._signedPost(self._orders, emptyPayload)
-        order = orders.json()['orders'][0]
        
-        orderR: Response = self._signedPost(order, emptyPayload)
+        orderR: Response = self._signedPost(orderUrl, emptyPayload)
 
         certificateUrl = orderR.json()['certificate']
         certificate: Response = self._signedPost(certificateUrl, emptyPayload)
