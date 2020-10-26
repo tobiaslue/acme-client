@@ -31,4 +31,5 @@ while [ $# -gt 0 ]; do
      esac
 done
 
+python3 dnsserver.py &
 python3 main.py $challenge_type $dir $record $domains

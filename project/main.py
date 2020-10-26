@@ -1,5 +1,8 @@
 from client import Client
 import sys
+from flask import Flask
+from flask.helpers import make_response
+from multiprocessing import Process
 
 challenge_type = ''
 directory = ''
@@ -28,4 +31,15 @@ client = Client(
     domains=domains,
     isRevoked=revoked)
 client.createAccount()
-client.getCertificate()
+certificate = client.getCertificate().text
+print('Certificate ready')
+app = Flask(__name__)
+@app.route('/')
+def getCertificate():
+    response = make_response(certificate)
+    return response
+p = Process(target=app.run, kwargs={
+    'host': 'localhost',
+    'port': 5001
+})   
+p.start()  
