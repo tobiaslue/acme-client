@@ -42,6 +42,15 @@ class Client:
         self._publicKey = self._privateKey.public_key()
         self._setEndpoints()
 
+    def writePrivateKey(self):
+        f = open('privateKey.pem', 'wb')
+        f.write(self._privateCertKey.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        ))
+        f.close()
+
     def _getKeyAuth(self, token: str) -> str:
         jwk: bytes = json.dumps(self._getJwk(), sort_keys=True, separators=(',', ':')).encode('utf8')
         digest = hashes.Hash(hashes.SHA256(), default_backend())

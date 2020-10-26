@@ -31,15 +31,21 @@ client = Client(
     domains=domains,
     isRevoked=revoked)
 client.createAccount()
-certificate = client.getCertificate().text
+client.writePrivateKey()
+certificate = client.getCertificate()
+f = open('certificate.pem', 'w')
+f.write(certificate.text)
+f.close()
+print(certificate.text)
 print('Certificate ready')
 app = Flask(__name__)
 @app.route('/')
 def getCertificate():
-    response = make_response(certificate)
+    response = make_response(certificate.text)
     return response
 p = Process(target=app.run, kwargs={
     'host': record,
-    'port': 5001
+    'port': 5001,
+    'ssl_context': ('certificate.pem', 'privateKey.pem')
 })   
 p.start()  
