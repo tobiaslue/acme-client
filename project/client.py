@@ -12,6 +12,7 @@ from cryptography import x509
 from cryptography.x509.oid import NameOID
 import time
 import base64
+from dnsserver import DnsServer
 
 Response = requests.models.Response
 
@@ -94,7 +95,7 @@ class Client:
         print(f'Create order for {self._domains}')
         return authUrls, finalizeUrl, orderUrl
 
-    def _getChallenge(self, authUrl: str) -> Tuple[str, str]:
+    def _getChallenge(self, authUrl: str) -> Tuple[str, str, str]:
         emptyPayload: str = getBase64(''.encode('utf8'))
         response: Response = self._signedPost(authUrl, emptyPayload)
         print(response.text)
@@ -105,10 +106,14 @@ class Client:
             if c['type'] == challengeType:
                 token = c['token']
                 url = c['url']
+        domain: str = response.json()['identifier']['value']
+        print(token)
         print(f'Get {challengeType} Challenge')
-        return token, url
+        return token, url, domain
 
     def _solveHttpChallenge(self, keyAuth: str, challengeUrl: str, authUrl: str) -> None:
+        dnsServer = DnsServer(self._record, f". 60 IN A {self._record}", '')
+        dnsServer.start()
         app = Flask(__name__)
         @app.route('/.well-known/acme-challenge/<token>')
         def challenge(token):
@@ -129,26 +134,47 @@ class Client:
         while status == 'pending':
             responseAuth: Response = self._signedPost(authUrl, emptyPayload)
             status = responseAuth.json()['status']
+            time.sleep(0.5)
+
         p.terminate()
         p.join()
+        dnsServer.shutDown()
         print(f'Http Challenge {status}')
         
-    def _solveDnsChallenge(self, keyAuth: str) -> None:
-        x = 5
+    def _solveDnsChallenge(self, keyAuth: str, domain: str, challengeUrl: str, authUrl: str) -> None:
+        digest = hashes.Hash(hashes.SHA256(), default_backend())
+        digest.update(keyAuth.encode('utf8'))
+        digest = getBase64(digest.finalize())
+        dnsUrl: str = f"_acme-challenge.{domain}."
+        dnsRecord: str = f" 300 IN TXT {digest}"
+        print(dnsRecord)
+        dnsServer = DnsServer(self._record, dnsRecord, dnsUrl)
+        dnsServer.start()
+        emptyDict: str = getBase64(json.dumps({}).encode('utf8'))
+        emptyPayload: str = getBase64(''.encode('utf8'))
+        responseChallenge: Response = self._signedPost(challengeUrl, emptyDict) 
+        
+        status = 'pending'
+        while status == 'pending':
+            responseAuth: Response = self._signedPost(authUrl, emptyPayload)
+            status = responseAuth.json()['status']
+            time.sleep(0.5)
+            
+        dnsServer.shutDown()
+        print(f'Dns Challenge {status}')
+
 
     def getCertificate(self) -> Response:
         authUrls, finalizeUrl, orderUrl  = self._createOrder()
         
         for authUrl in authUrls:
-
-            token, challengeUrl= self._getChallenge(authUrl)
-
+            token, challengeUrl, domain = self._getChallenge(authUrl)
             keyAuth: str = self._getKeyAuth(token)
 
             if self._challengeType == 'http01':
                 self._solveHttpChallenge(keyAuth, challengeUrl, authUrl)
             else:
-                self._solveDnsChallenge(keyAuth)
+                self._solveDnsChallenge(keyAuth, domain, challengeUrl, authUrl)
         
         emptyPayload: str = getBase64(''.encode('utf8'))        
         csr: dict = {'csr': self._getCsr()}

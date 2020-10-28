@@ -13,23 +13,18 @@ while [ $# -gt 0 ]; do
      case $key in
           --dir)
           dir="$2"
-          shift
-          shift
           ;;
           --record)
           record="$2"
-          shift
-          shift
           ;;
           --domain)
           domains+="$2 "
-          shift
-          shift
           ;;
-          *)
+          *) break
           ;;
      esac
+     shift
+     shift
 done
-
 python3 dnsserver.py $record & 
 python3 main.py $challenge_type $dir $record $domains

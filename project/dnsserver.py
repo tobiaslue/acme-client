@@ -1,24 +1,36 @@
-from dnslib.server import DNSServer, DNSRecord
+from dnslib.server import DNSServer, BaseResolver
 from dnslib import RR
-import sys
+import copy
 
-record = ''
+class FixedResolver(BaseResolver):
+    def __init__(self,zone,keyAuth):
+        self.rrs = RR.fromZone(zone)
+        self._keyAuth = keyAuth
 
-for i, arg in enumerate(sys.argv):
-    if i == 0:
-        continue
-    if i == 1:
-        record = arg
-
-class TestResolver:
     def resolve(self,request,handler):
         reply = request.reply()
-        reply.add_answer(*RR.fromZone(f". 60 IN A {record}"))
-        print("dns ", reply)
+        qname = request.q.qname
+
+        if not self._keyAuth == '':
+            qname = self._keyAuth
+            print(qname)
+        for rr in self.rrs:
+            a = copy.copy(rr)
+            a.rname = qname
+            reply.add_answer(a)
         return reply
 
-resolver = TestResolver()
-server = DNSServer(resolver, port=10053, address=record)
-server.start()
+class DnsServer:
+    def __init__(self, host: str, record: str, url: str):
+        resolver = FixedResolver(record, url)
+        self._server = DNSServer(resolver, port=10053, address=host)
+
+    def start(self):
+        self._server.start_thread()
+
+    def shutDown(self):
+        self._server.stop()
+
+
 
 
