@@ -62,7 +62,7 @@ def shutdown_server():
 
 shutDownServer = Flask(__name__)
 
-@shutDownServer.route('/')
+@shutDownServer.route('/shutdown')
 def shutDown():
     shutdown_server()
     return 'shutdown'
