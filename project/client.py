@@ -88,7 +88,6 @@ class Client:
             'identifiers': identifiers
         }).encode('utf8'))
         response: Response = self._signedPost(self._newOrder, payload)
-        print(response.text)
         finalizeUrl: str = response.json()['finalize']
         authUrls: str = response.json()['authorizations']
         orderUrl: str = response.headers['Location']
@@ -98,7 +97,6 @@ class Client:
     def _getChallenge(self, authUrl: str) -> Tuple[str, str, str]:
         emptyPayload: str = getBase64(''.encode('utf8'))
         response: Response = self._signedPost(authUrl, emptyPayload)
-        print(response.text)
         challengeType: str = 'http-01' if self._challengeType == 'http01' else 'dns-01'
         token: str = ''
         url: str = ''
@@ -107,7 +105,6 @@ class Client:
                 token = c['token']
                 url = c['url']
         domain: str = response.json()['identifier']['value']
-        print(token)
         print(f'Get {challengeType} Challenge')
         return token, url, domain
 
@@ -147,7 +144,6 @@ class Client:
         digest = getBase64(digest.finalize())
         dnsUrl: str = f"_acme-challenge.{domain}."
         dnsRecord: str = f" 300 IN TXT {digest}"
-        print(dnsRecord)
         dnsServer = DnsServer(self._record, dnsRecord, dnsUrl)
         dnsServer.start()
         emptyDict: str = getBase64(json.dumps({}).encode('utf8'))
@@ -181,7 +177,6 @@ class Client:
         print('Send Csr')
        
         responseCsr: Response = self._signedPost(finalizeUrl, getBase64(json.dumps(csr).encode('utf8')))
-        print(responseCsr.text)
         orderR: Response = self._signedPost(orderUrl, emptyPayload)
         certificateUrl = orderR.json()['certificate']
         certificate: Response = self._signedPost(certificateUrl, emptyPayload)
@@ -228,7 +223,6 @@ class Client:
             header['jwk'] = self._getJwk()
         else:
             header['kid'] = self._kid
-        #print(header)
         return getBase64(json.dumps(header).encode('utf-8'))
 
     def _getHeader(self) -> dict:
@@ -255,7 +249,6 @@ class Client:
             }).encode('utf8')
             r: Response = requests.post(target, verify='pebble.minica.pem', headers=headers, data=data)
             status = r.status_code
-            print(r.text)
         return r
 
     def _getNonce(self) -> str:
@@ -268,6 +261,7 @@ class Client:
             'certificate': getBase64(cert)
         }).encode('utf8'))
         response: Response = self._signedPost(self._revokeCert, payload)
+        print('Revoke certificate')
 
 def getBase64(x: bytes) -> str:
     return base64.urlsafe_b64encode(x).decode('utf-8').replace('=', '')

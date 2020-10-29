@@ -1,6 +1,6 @@
 from client import Client
 import sys
-from flask import Flask
+from flask import Flask, request
 from flask.helpers import make_response
 from multiprocessing import Process
 
@@ -52,3 +52,23 @@ p = Process(target=app.run, kwargs={
     'ssl_context': ('certificate.pem', 'privateKey.pem')
 })   
 p.start()  
+
+def shutdown_server():
+    print('Shut down shutdown server')
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+shutDownServer = Flask(__name__)
+
+@shutDownServer.route('/')
+def shutDown():
+    shutdown_server()
+    return 'shutdown'
+
+shutDownServer.run(port=5003)
+
+p.terminate()
+p.join()
+print('Shut down certificate server')
