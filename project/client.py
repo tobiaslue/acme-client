@@ -159,7 +159,7 @@ class Client:
             responseAuth: Response = self._signedPost(authUrl, emptyPayload)
             status = responseAuth.json()['status']
             time.sleep(0.5)
-            
+
         dnsServer.shutDown()
         print(f'Dns Challenge {status}')
 
@@ -255,11 +255,19 @@ class Client:
             }).encode('utf8')
             r: Response = requests.post(target, verify='pebble.minica.pem', headers=headers, data=data)
             status = r.status_code
+            print(r.text)
         return r
 
     def _getNonce(self) -> str:
         r = requests.get(self._newNonce, verify='pebble.minica.pem')
         return r.headers['Replay-Nonce']
+
+    def revokeCertificate(self, certificate: str):
+        cert = x509.load_pem_x509_certificate(certificate.encode('utf8')).public_bytes(serialization.Encoding.DER)
+        payload: str = getBase64(json.dumps({
+            'certificate': getBase64(cert)
+        }).encode('utf8'))
+        response: Response = self._signedPost(self._revokeCert, payload)
 
 def getBase64(x: bytes) -> str:
     return base64.urlsafe_b64encode(x).decode('utf-8').replace('=', '')

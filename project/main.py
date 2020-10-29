@@ -24,6 +24,8 @@ for i, arg in enumerate(sys.argv):
     else:
         domains.append(arg)
 
+print(revoked)
+
 client = Client(
     challengeType=challenge_type, 
     directory=directory,
@@ -33,6 +35,8 @@ client = Client(
 client.createAccount()
 client.writePrivateKey()
 certificate = client.getCertificate()
+if revoked:
+    client.revokeCertificate(certificate.text)
 f = open('certificate.pem', 'w')
 f.write(certificate.text)
 f.close()

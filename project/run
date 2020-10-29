@@ -11,6 +11,9 @@ shift
 while [ $# -gt 0 ]; do
      key="$1"
      case $key in
+          --revoke)
+          revoked=revoke
+          ;;
           --dir)
           dir="$2"
           ;;
@@ -27,4 +30,4 @@ while [ $# -gt 0 ]; do
      shift
 done
 python3 dnsserver.py $record & 
-python3 main.py $challenge_type $dir $record $domains
+python3 main.py $challenge_type $dir $record $domains $revoked
